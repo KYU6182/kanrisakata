@@ -13,11 +13,11 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .animate-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #lightbox { transition: opacity 0.2s ease-in-out; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-24">
 
-    <!-- アプリのメインコンテナ -->
     <div id="app">
         <!-- Header -->
         <header class="bg-white border-b sticky top-0 z-30 px-4 py-3 shadow-sm">
@@ -33,7 +33,6 @@
                     </div>
                 </div>
                 
-                <!-- Property Switcher -->
                 <div id="property-tabs" class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                     <!-- JSで動的に生成 -->
                 </div>
@@ -69,15 +68,11 @@
                 </div>
             </div>
 
-            <!-- Form View (Hidden by default) -->
+            <!-- Form View -->
             <div id="form-view" class="hidden bg-white rounded-3xl shadow-xl border border-slate-100 p-6 animate-in">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 id="form-title" class="text-lg font-black flex items-center gap-2 text-slate-800">
-                        新規作成
-                    </h2>
-                    <button onclick="hideAddForm()" class="bg-slate-100 p-2 rounded-full text-slate-400">
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
+                    <h2 id="form-title" class="text-lg font-black flex items-center gap-2 text-slate-800">新規作成</h2>
+                    <button onclick="hideAddForm()" class="bg-slate-100 p-2 rounded-full text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
                 <form id="report-form" class="space-y-5">
                     <div class="bg-slate-50 p-4 rounded-2xl">
@@ -91,7 +86,6 @@
                     <div class="bg-slate-50 p-4 rounded-2xl">
                         <label class="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">現場写真</label>
                         <div id="photo-preview-grid" class="grid grid-cols-3 gap-3">
-                            <!-- Preview images -->
                             <label class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl bg-white hover:bg-blue-50 transition-all cursor-pointer">
                                 <i data-lucide="camera" class="text-slate-400"></i>
                                 <span class="text-[9px] text-slate-500 mt-1 font-bold">追加</span>
@@ -99,24 +93,31 @@
                             </label>
                         </div>
                     </div>
-                    <button type="submit" id="submit-btn" class="w-full py-4 rounded-2xl font-black text-white shadow-xl bg-blue-600 active:scale-95 transition-all">
-                        報告書を送信する
-                    </button>
+                    <button type="submit" id="submit-btn" class="w-full py-4 rounded-2xl font-black text-white shadow-xl bg-blue-600 active:scale-95 transition-all">報告書を送信する</button>
                 </form>
             </div>
         </main>
 
         <!-- Lightbox -->
-        <div id="lightbox" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
-            <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white bg-white/10 p-3 rounded-full backdrop-blur-xl border border-white/20">
-                <i data-lucide="x" class="w-6 h-6"></i>
+        <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4" onclick="closeLightbox(event)">
+            <button onclick="closeLightbox(event)" class="absolute top-6 right-6 text-white bg-white/20 p-4 rounded-full backdrop-blur-xl border border-white/20 z-[110] active:scale-90 transition-transform">
+                <i data-lucide="x" class="w-7 h-7 pointer-events-none"></i>
             </button>
-            <div class="w-full h-full flex items-center justify-center relative">
-                <button onclick="prevPhoto()" class="absolute left-2 text-white/50 hover:text-white"><i data-lucide="chevron-left" class="w-10 h-10"></i></button>
-                <img id="lightbox-img" src="" class="max-w-full max-h-[80vh] object-contain rounded-lg">
-                <button onclick="nextPhoto()" class="absolute right-2 text-white/50 hover:text-white"><i data-lucide="chevron-right" class="w-10 h-10"></i></button>
+            
+            <div class="w-full h-full flex items-center justify-center relative pointer-events-none">
+                <button onclick="prevPhoto(event)" class="absolute left-0 h-full w-20 flex items-center justify-start pl-4 text-white/50 hover:text-white pointer-events-auto z-[105]">
+                    <i data-lucide="chevron-left" class="w-10 h-10"></i>
+                </button>
+                
+                <!-- 写真本体にも onclick を追加 -->
+                <img id="lightbox-img" src="" onclick="closeLightbox(event)" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl pointer-events-auto z-[102] cursor-pointer">
+                
+                <button onclick="nextPhoto(event)" class="absolute right-0 h-full w-20 flex items-center justify-end pr-4 text-white/50 hover:text-white pointer-events-auto z-[105]">
+                    <i data-lucide="chevron-right" class="w-10 h-10"></i>
+                </button>
             </div>
-            <div id="lightbox-counter" class="text-white/60 text-[10px] font-bold tracking-widest mt-4">1 / 1</div>
+            
+            <div id="lightbox-counter" class="text-white/60 text-xs font-bold tracking-widest mt-4 z-[105] pointer-events-none">1 / 1</div>
         </div>
 
         <!-- Property Badge -->
@@ -134,25 +135,15 @@
 
         <!-- Footer Nav -->
         <nav class="fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 px-8 py-4 flex justify-between items-center z-40">
-            <div class="flex flex-col items-center gap-1.5">
-                <div class="bg-blue-600 text-white p-2 rounded-xl"><i data-lucide="building-2" class="w-5 h-5"></i></div>
-                <span class="text-[9px] font-black text-blue-600 uppercase">Properties</span>
-            </div>
-            <div class="flex flex-col items-center gap-1.5 opacity-30">
-                <i data-lucide="image" class="w-5 h-5"></i>
-                <span class="text-[9px] font-black uppercase">Gallery</span>
-            </div>
-            <div class="flex flex-col items-center gap-1.5 opacity-30">
-                <i data-lucide="archive" class="w-5 h-5"></i>
-                <span class="text-[9px] font-black uppercase">Documents</span>
-            </div>
+            <div class="flex flex-col items-center gap-1.5"><div class="bg-blue-600 text-white p-2 rounded-xl"><i data-lucide="building-2" class="w-5 h-5"></i></div><span class="text-[9px] font-black text-blue-600 uppercase">Properties</span></div>
+            <div class="flex flex-col items-center gap-1.5 opacity-30"><i data-lucide="image" class="w-5 h-5"></i><span class="text-[9px] font-black uppercase">Gallery</span></div>
+            <div class="flex flex-col items-center gap-1.5 opacity-30"><i data-lucide="archive" class="w-5 h-5"></i><span class="text-[9px] font-black uppercase">Documents</span></div>
         </nav>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, Timestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -183,17 +174,14 @@
             lightboxIndex: 0
         };
 
-        // Initialize App
         window.onload = async () => {
             lucide.createIcons();
             document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
-            
             await signInAnonymously(auth);
             renderPropertyTabs();
             listenToData();
         };
 
-        // Render Tabs
         function renderPropertyTabs() {
             const container = document.getElementById('property-tabs');
             container.innerHTML = PROPERTIES.map(p => `
@@ -220,13 +208,11 @@
             listenToData();
         };
 
-        // Data Management
         let unsubscribe = null;
         function listenToData() {
             if (unsubscribe) unsubscribe();
             const collectionName = `${state.activeTab === 'cleaning' ? 'cleaning_logs' : 'work_reports'}_${state.activeProperty.id}`;
             const q = collection(db, 'artifacts', appId, 'public', 'data', collectionName);
-            
             unsubscribe = onSnapshot(q, (snapshot) => {
                 const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
                     .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -240,34 +226,30 @@
                 container.innerHTML = `<div class="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center text-slate-400 font-bold">記録がありません</div>`;
                 return;
             }
-
-            // Group by Month
             const grouped = records.reduce((acc, r) => {
                 const month = (r.date || "").substring(0, 7) || "不明";
                 if (!acc[month]) acc[month] = [];
                 acc[month].push(r);
                 return acc;
             }, {});
-
             container.innerHTML = Object.keys(grouped).map(month => `
                 <div class="space-y-4">
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm font-black text-slate-800 bg-slate-200 px-3 py-1 rounded-lg">${month.replace('-', '年')}月</span>
-                        <div class="flex-1 h-[2px] bg-slate-100"></div>
-                    </div>
+                    <div class="flex items-center gap-3"><span class="text-sm font-black text-slate-800 bg-slate-200 px-3 py-1 rounded-lg">${month.replace('-', '年')}月</span><div class="flex-1 h-[2px] bg-slate-100"></div></div>
                     ${grouped[month].map(r => `
-                        <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
-                            <div class="flex justify-between items-start mb-3">
-                                <div>
-                                    <div class="text-[10px] text-slate-400 font-black tracking-wider uppercase">${r.date}</div>
-                                    <div class="font-black text-slate-800 text-sm">${state.activeTab === 'cleaning' ? '定期巡回・清掃' : '保守メンテナンス'}</div>
-                                </div>
+                        <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm relative group">
+                            <!-- 削除ボタン -->
+                            <button onclick="window.confirmDelete('${r.id}')" class="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors p-2">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+
+                            <div class="flex justify-between items-start mb-3 pr-8">
+                                <div><div class="text-[10px] text-slate-400 font-black tracking-wider uppercase">${r.date}</div><div class="font-black text-slate-800 text-sm">${state.activeTab === 'cleaning' ? '定期巡回・清掃' : '保守メンテナンス'}</div></div>
                                 <div class="text-green-500"><i data-lucide="check-circle-2" class="w-5 h-5"></i></div>
                             </div>
                             <p class="text-sm text-slate-600 mb-4 whitespace-pre-wrap font-medium">${r.content}</p>
                             <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                                 ${(r.photos || []).map((p, idx) => `
-                                    <img src="${p}" onclick="window.openLightbox(${JSON.stringify(r.photos).replace(/"/g, '&quot;')}, ${idx})" class="w-24 h-24 rounded-2xl object-cover flex-shrink-0 border shadow-sm cursor-pointer">
+                                    <img src="${p}" onclick="window.openLightbox(${JSON.stringify(r.photos).replace(/"/g, '&quot;')}, ${idx})" class="w-24 h-24 rounded-2xl object-cover flex-shrink-0 border shadow-sm cursor-pointer active:scale-95 transition-transform">
                                 `).join('')}
                             </div>
                         </div>
@@ -277,7 +259,19 @@
             lucide.createIcons();
         }
 
-        // Form Logic
+        // 削除確認と処理
+        window.confirmDelete = async (id) => {
+            const collectionName = `${state.activeTab === 'cleaning' ? 'cleaning_logs' : 'work_reports'}_${state.activeProperty.id}`;
+            const confirmed = window.confirm("この報告を完全に削除してもよろしいですか？");
+            if (confirmed) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id));
+                } catch (err) {
+                    alert("削除に失敗しました");
+                }
+            }
+        };
+
         window.showAddForm = () => {
             document.getElementById('list-view').classList.add('hidden');
             document.getElementById('form-view').classList.remove('hidden');
@@ -291,7 +285,6 @@
             renderPhotoPreview();
         };
 
-        // Photo Upload & Compression
         document.getElementById('file-input').addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             for (const file of files) {
@@ -340,13 +333,11 @@
             renderPhotoPreview();
         };
 
-        // Form Submit
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
             btn.innerText = "送信中...";
             btn.disabled = true;
-
             const collectionName = `${state.activeTab === 'cleaning' ? 'cleaning_logs' : 'work_reports'}_${state.activeProperty.id}`;
             try {
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', collectionName), {
@@ -369,24 +360,30 @@
             }
         };
 
-        // Lightbox Logic
         window.openLightbox = (photos, idx) => {
             state.lightboxPhotos = photos;
             state.lightboxIndex = idx;
             updateLightbox();
-            document.getElementById('lightbox').classList.remove('hidden');
+            const lb = document.getElementById('lightbox');
+            lb.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         };
 
-        window.closeLightbox = () => {
-            document.getElementById('lightbox').classList.add('hidden');
+        window.closeLightbox = (event) => {
+            if (event) event.stopPropagation();
+            const lb = document.getElementById('lightbox');
+            lb.classList.add('hidden');
+            document.body.style.overflow = '';
         };
 
-        window.nextPhoto = () => {
+        window.nextPhoto = (event) => {
+            if (event) event.stopPropagation();
             state.lightboxIndex = (state.lightboxIndex + 1) % state.lightboxPhotos.length;
             updateLightbox();
         };
 
-        window.prevPhoto = () => {
+        window.prevPhoto = (event) => {
+            if (event) event.stopPropagation();
             state.lightboxIndex = (state.lightboxIndex - 1 + state.lightboxPhotos.length) % state.lightboxPhotos.length;
             updateLightbox();
         };
