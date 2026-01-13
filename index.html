@@ -29,7 +29,7 @@
                     </h1>
                     <div id="sync-status" class="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold border border-green-100">
                         <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                        クラウド同期中
+                        同期中
                     </div>
                 </div>
                 
@@ -84,14 +84,18 @@
                         <textarea id="form-content" rows="5" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 font-medium outline-none resize-none" placeholder="作業内容を入力..." required></textarea>
                     </div>
                     <div class="bg-slate-50 p-4 rounded-2xl">
-                        <label class="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">現場写真</label>
+                        <div class="flex justify-between items-center mb-3">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest">現場写真 (最大10枚)</label>
+                            <span id="photo-count" class="text-[9px] font-bold text-slate-400">0/10</span>
+                        </div>
                         <div id="photo-preview-grid" class="grid grid-cols-3 gap-3">
-                            <label class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl bg-white hover:bg-blue-50 transition-all cursor-pointer">
+                            <label id="add-photo-btn" class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl bg-white hover:bg-blue-50 transition-all cursor-pointer">
                                 <i data-lucide="camera" class="text-slate-400"></i>
                                 <span class="text-[9px] text-slate-500 mt-1 font-bold">追加</span>
                                 <input type="file" id="file-input" accept="image/*" multiple class="hidden">
                             </label>
                         </div>
+                        <p id="size-warning" class="hidden text-[10px] text-red-500 mt-2 font-bold">⚠️ 容量制限のためこれ以上追加できません</p>
                     </div>
                     <button type="submit" id="submit-btn" class="w-full py-4 rounded-2xl font-black text-white shadow-xl bg-blue-600 active:scale-95 transition-all">報告書を送信する</button>
                 </form>
@@ -103,21 +107,36 @@
             <button onclick="closeLightbox(event)" class="absolute top-6 right-6 text-white bg-white/20 p-4 rounded-full backdrop-blur-xl border border-white/20 z-[110] active:scale-90 transition-transform">
                 <i data-lucide="x" class="w-7 h-7 pointer-events-none"></i>
             </button>
-            
             <div class="w-full h-full flex items-center justify-center relative pointer-events-none">
-                <button onclick="prevPhoto(event)" class="absolute left-0 h-full w-20 flex items-center justify-start pl-4 text-white/50 hover:text-white pointer-events-auto z-[105]">
+                <button onclick="prevPhoto(event)" class="absolute left-0 h-full w-16 flex items-center justify-start pl-2 text-white/40 hover:text-white pointer-events-auto z-[105]">
                     <i data-lucide="chevron-left" class="w-10 h-10"></i>
                 </button>
                 
-                <!-- 写真本体にも onclick を追加 -->
+                <!-- 写真本体をタップしても閉じるように onclick を設定 -->
                 <img id="lightbox-img" src="" onclick="closeLightbox(event)" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl pointer-events-auto z-[102] cursor-pointer">
                 
-                <button onclick="nextPhoto(event)" class="absolute right-0 h-full w-20 flex items-center justify-end pr-4 text-white/50 hover:text-white pointer-events-auto z-[105]">
+                <button onclick="nextPhoto(event)" class="absolute right-0 h-full w-16 flex items-center justify-end pr-2 text-white/40 hover:text-white pointer-events-auto z-[105]">
                     <i data-lucide="chevron-right" class="w-10 h-10"></i>
                 </button>
             </div>
-            
             <div id="lightbox-counter" class="text-white/60 text-xs font-bold tracking-widest mt-4 z-[105] pointer-events-none">1 / 1</div>
+        </div>
+
+        <!-- 削除確認モーダル -->
+        <div id="delete-modal" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+            <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl animate-in">
+                <div class="text-center">
+                    <div class="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="trash-2" class="text-red-500 w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-lg font-black text-slate-800 mb-2">報告を削除しますか？</h3>
+                    <p class="text-xs text-slate-400 font-medium mb-6">この操作は取り消せません。</p>
+                    <div class="flex gap-3">
+                        <button onclick="closeDeleteModal()" class="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-xl active:scale-95 transition-all">キャンセル</button>
+                        <button id="confirm-delete-btn" class="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-200 active:scale-95 transition-all">削除する</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Property Badge -->
@@ -171,7 +190,8 @@
             records: [],
             tempPhotos: [],
             lightboxPhotos: [],
-            lightboxIndex: 0
+            lightboxIndex: 0,
+            deleteTargetId: null
         };
 
         window.onload = async () => {
@@ -236,17 +256,17 @@
                 <div class="space-y-4">
                     <div class="flex items-center gap-3"><span class="text-sm font-black text-slate-800 bg-slate-200 px-3 py-1 rounded-lg">${month.replace('-', '年')}月</span><div class="flex-1 h-[2px] bg-slate-100"></div></div>
                     ${grouped[month].map(r => `
-                        <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm relative group">
+                        <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm relative">
                             <!-- 削除ボタン -->
-                            <button onclick="window.confirmDelete('${r.id}')" class="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors p-2">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            <button onclick="confirmDelete('${r.id}')" class="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
                             </button>
 
                             <div class="flex justify-between items-start mb-3 pr-8">
                                 <div><div class="text-[10px] text-slate-400 font-black tracking-wider uppercase">${r.date}</div><div class="font-black text-slate-800 text-sm">${state.activeTab === 'cleaning' ? '定期巡回・清掃' : '保守メンテナンス'}</div></div>
                                 <div class="text-green-500"><i data-lucide="check-circle-2" class="w-5 h-5"></i></div>
                             </div>
-                            <p class="text-sm text-slate-600 mb-4 whitespace-pre-wrap font-medium">${r.content}</p>
+                            <p class="text-sm text-slate-600 mb-4 whitespace-pre-wrap font-medium leading-relaxed">${r.content}</p>
                             <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                                 ${(r.photos || []).map((p, idx) => `
                                     <img src="${p}" onclick="window.openLightbox(${JSON.stringify(r.photos).replace(/"/g, '&quot;')}, ${idx})" class="w-24 h-24 rounded-2xl object-cover flex-shrink-0 border shadow-sm cursor-pointer active:scale-95 transition-transform">
@@ -259,16 +279,26 @@
             lucide.createIcons();
         }
 
-        // 削除確認と処理
-        window.confirmDelete = async (id) => {
+        // --- 削除ロジック ---
+        window.confirmDelete = (id) => {
+            state.deleteTargetId = id;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        };
+
+        window.closeDeleteModal = () => {
+            document.getElementById('delete-modal').classList.add('hidden');
+            state.deleteTargetId = null;
+        };
+
+        document.getElementById('confirm-delete-btn').onclick = async () => {
+            if (!state.deleteTargetId) return;
             const collectionName = `${state.activeTab === 'cleaning' ? 'cleaning_logs' : 'work_reports'}_${state.activeProperty.id}`;
-            const confirmed = window.confirm("この報告を完全に削除してもよろしいですか？");
-            if (confirmed) {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id));
-                } catch (err) {
-                    alert("削除に失敗しました");
-                }
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', collectionName, state.deleteTargetId);
+            try {
+                await deleteDoc(docRef);
+                closeDeleteModal();
+            } catch (err) {
+                alert("削除に失敗しました");
             }
         };
 
@@ -288,12 +318,23 @@
         document.getElementById('file-input').addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             for (const file of files) {
+                if (state.tempPhotos.length >= 10) { // 10枚に拡張
+                    alert("写真は最大10枚までです");
+                    break;
+                }
                 const compressed = await compressImage(file);
+                const currentTotalSize = state.tempPhotos.reduce((acc, p) => acc + p.length, 0);
+                if (currentTotalSize + compressed.length > 950000) { 
+                    document.getElementById('size-warning').classList.remove('hidden');
+                    break;
+                }
                 state.tempPhotos.push(compressed);
+                renderPhotoPreview();
             }
-            renderPhotoPreview();
+            e.target.value = '';
         });
 
+        // 10枚送るために圧縮をさらに強化 (600px / 0.4品質)
         function compressImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -304,12 +345,13 @@
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let w = img.width, h = img.height;
-                        const MAX = 1000;
+                        const MAX = 600; // 800から600に縮小
                         if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
                         else if (h > MAX) { w *= MAX / h; h = MAX; }
                         canvas.width = w; canvas.height = h;
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6));
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.4)); // 品質を0.4に
                     };
                 };
             });
@@ -317,14 +359,24 @@
 
         function renderPhotoPreview() {
             const grid = document.getElementById('photo-preview-grid');
-            const addBtn = grid.querySelector('label');
-            grid.innerHTML = state.tempPhotos.map((p, i) => `
-                <div class="relative aspect-square rounded-xl overflow-hidden border shadow-sm">
+            const addBtn = document.getElementById('add-photo-btn');
+            const countLabel = document.getElementById('photo-count');
+            const previews = grid.querySelectorAll('.photo-item');
+            previews.forEach(p => p.remove());
+
+            state.tempPhotos.forEach((p, i) => {
+                const div = document.createElement('div');
+                div.className = "photo-item relative aspect-square rounded-xl overflow-hidden border shadow-sm";
+                div.innerHTML = `
                     <img src="${p}" class="w-full h-full object-cover">
-                    <button type="button" onclick="removeTempPhoto(${i})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"><i data-lucide="x" class="w-3 h-3"></i></button>
-                </div>
-            `).join('');
-            grid.appendChild(addBtn);
+                    <button type="button" onclick="removeTempPhoto(${i})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md"><i data-lucide="x" class="w-3 h-3"></i></button>
+                `;
+                grid.insertBefore(div, addBtn);
+            });
+            countLabel.innerText = `${state.tempPhotos.length}/10`;
+            if (state.tempPhotos.length >= 10) addBtn.classList.add('hidden');
+            else addBtn.classList.remove('hidden');
+            document.getElementById('size-warning').classList.add('hidden');
             lucide.createIcons();
         }
 
@@ -336,6 +388,11 @@
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
+            const totalSize = state.tempPhotos.reduce((acc, p) => acc + p.length, 0);
+            if (totalSize > 1000000) {
+                alert("データの容量が大きすぎます。写真を減らしてください。");
+                return;
+            }
             btn.innerText = "送信中...";
             btn.disabled = true;
             const collectionName = `${state.activeTab === 'cleaning' ? 'cleaning_logs' : 'work_reports'}_${state.activeProperty.id}`;
@@ -364,15 +421,13 @@
             state.lightboxPhotos = photos;
             state.lightboxIndex = idx;
             updateLightbox();
-            const lb = document.getElementById('lightbox');
-            lb.classList.remove('hidden');
+            document.getElementById('lightbox').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         };
 
         window.closeLightbox = (event) => {
-            if (event) event.stopPropagation();
-            const lb = document.getElementById('lightbox');
-            lb.classList.add('hidden');
+            // イベントの伝播を防ぐ必要なし、どこをタップしても閉じる
+            document.getElementById('lightbox').classList.add('hidden');
             document.body.style.overflow = '';
         };
 
